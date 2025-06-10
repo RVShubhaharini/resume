@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Resume Shortlister</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-weight: bold;
+            margin: 40px;
+        }
+        label, input, textarea, button, h1, h3, .feedback, .score, .expander {
+            font-weight: bold;
+        }
+        .resume-block {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .feedback {
+            color: #ecf0f1;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        .score {
+            color: #3498db;
+        }
+        .download-btn {
+            margin-top: 30px;
+        }
+        .expander {
+            cursor: pointer;
+            color: #00bfff;
+            text-decoration: underline;
+        }
+        .resume-text {
+            display: none;
+            margin-top: 12px;
+            white-space: pre-line;
+        }
+        input, textarea {
+            background-color: #2c2c2c;
+            color: white;
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Resume Shortlister and Feedback Generator</h1>
+    <form id="resumeForm" enctype="multipart/form-data">
+        <div style="margin-bottom: 20px;">
+            <label for="job_role">Job Role</label>
+            <input type="text" id="job_role" name="job_role" required>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="job_description">Job Description</label>
+            <textarea id="job_description" name="job_description" rows="4" required></textarea>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="resumes">Upload Resumes (PDF or DOCX)</label>
+            <input type="file" id="resumes" name="resumes" multiple accept=".pdf,.docx" required>
+        </div>
+        <button type="submit">Shortlist Top 3 Resumes</button>
+    </form>
+    <div id="results" style="margin-top: 30px;"></div>
+    <button id="downloadBtn" class="download-btn" style="display:none;">Download Shortlisted Resumes as ZIP</button>
+
+    <script>
+        let shortlistedFilenames = [];
+
+        document.getElementById('resumeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            document.getElementById('results').innerHTML = "<p>Processing, please wait...</p>";
+            const formData = new FormData(this);
+
+            fetch('/shortlist', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resumes = data.resumes;
+                shortlistedFilenames = data.filenames;
+                let html = '';
+                resumes.forEach((resume, idx) => {
+                    html += `
+                        <div class="resume-block">
+                            <h3>${idx+1}. ${resume.filename}</h3>
+                            <div class="score">Score: ${resume.score} / 100</div>
+                            <div class="feedback"><strong>Feedback:</strong> ${resume.feedback}</div>
+                            <span class="expander" onclick="toggleText('resume${idx}')">Show Resume Text</span>
+                            <div class="resume-text" id="resume${idx}">${resume.text}</div>
+                        </div>
+                    `;
+                });
+                document.getElementById('results').innerHTML = html;
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+            })
+            .catch(() => {
+                document.getElementById('results').innerHTML = "<p style='color:red;'>Error processing resumes. Please try again.</p>";
+            });
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            fetch('/download', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({filenames: shortlistedFilenames})
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "shortlisted_resumes.zip";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            });
+        });
+
+        function toggleText(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>

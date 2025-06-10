@@ -1,0 +1,10 @@
+langgraph
+langchain
+flask
+flask-cors
+torch
+PyPDF2
+python-docx
+transformers
+huggingface_hub
+python-dotenv
