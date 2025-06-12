@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>AI Resume Shortlister</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css" />
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            font-weight: bold;
+            margin: 0;
+            min-height: 100vh;
+        }
+        #backBtn {
+            position: fixed;
+            top: 32px;
+            left: 32px;
+            background: #00bfff;
+            color: #181818;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 22px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 10px #222;
+        }
+        #backBtn:hover {
+            background: #009acd;
+        }
+        .container {
+            max-width: 950px;
+            margin: 64px auto 0 auto;
+            background: #181818;
+            padding: 48px 42px 36px 42px;
+            border-radius: 18px;
+            box-shadow: 0 0 24px #222;
+        }
+        .title-row {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .title-row h1 {
+            font-size: 2.2em;
+            margin: 0;
+        }
+        form {
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 28px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.13em;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            font-size: 1.15em;
+            padding: 16px;
+            resize: vertical;
+            margin-bottom: 0;
+            background-color: #232323;
+            color: #fff;
+            border: 1.5px solid #444;
+            border-radius: 9px;
+            box-sizing: border-box;
+        }
+        input[type="file"],
+        input[type="number"] {
+            background-color: #232323;
+            color: #f8f4f4;
+            border: 1.5px solid #444;
+            border-radius: 7px;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button[type="submit"] {
+            width: 100%;
+            font-size: 1.18em;
+            padding: 15px 0;
+            margin-top: 6px;
+            border-radius: 7px;
+        }
+        #downloadBtn {
+            margin-bottom: 24px;
+            width: 100%;
+            font-size: 1.1em;
+            padding: 13px 0;
+            border-radius: 7px;
+        }
+        #results {
+            margin-top: 32px;
+        }
+        .resume-block {
+            background: #1e1e1e;
+            padding: 30px 28px 22px 28px;
+            border-radius: 12px;
+            margin-bottom: 38px;
+            box-shadow: 0 0 12px #222;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            position: relative;
+        }
+        .resume-block h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+        .feedback {
+            color: #ecf0f1;
+            font-size: 1.13em;
+            margin-bottom: 15px;
+            background: #232323;
+            border-radius: 7px;
+            padding: 16px;
+            word-break: break-word;
+            white-space: pre-wrap;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .score {
+            color: #00bfff;
+            margin-bottom: 10px;
+        }
+        .expander {
+            cursor: pointer;
+            color: #00bfff;
+            text-decoration: underline;
+        }
+        .resume-text {
+            display: none;
+            margin-top: 12px;
+            white-space: pre-line;
+            background: #232323;
+            padding: 12px;
+            border-radius: 7px;
+            font-size: 1em;
+        }
+        .select-checkbox {
+            position: absolute;
+            top: 28px;
+            right: 28px;
+            transform: scale(1.4);
+            cursor: pointer;
+        }
+        /* Chart.js canvas styling */
+        #scoreChart, #lineChart {
+            background: #232323;
+            border-radius: 12px;
+            margin: 32px auto 0 auto;
+            display: block;
+            max-width: 800px;
+            width: 100%;
+            height: 340px;
+            box-shadow: 0 0 12px #222;
+        }
+        @media (max-width: 1100px) {
+            .container {
+                max-width: 98vw;
+                padding: 24px 6vw;
+            }
+        }
+        @media (max-width: 700px) {
+            #backBtn {
+                left: 14px;
+                top: 14px;
+                padding: 8px 10px;
+                font-size: 0.5em;
+            }
+            .container {
+                padding: 12vw 2vw;
+            }
+            #scoreChart, #lineChart {
+                height: 220px;
+            }
+        }
+    </style>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <button id="backBtn" onclick="window.location.href='home.html'">&larr; Back to Home</button>
+    <div class="container">
+        <div class="title-row">
+            <h1>AI Resume Shortlister and Feedback Generator</h1>
+        </div>
+        <form id="resumeForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="job_description">Job Description</label>
+                <textarea id="job_description" name="job_description" placeholder="Paste the job description here..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="resumes">Upload Resumes (PDF/DOCX)</label>
+                <input type="file" id="resumes" name="resumes" multiple accept=".pdf,.docx" required />
+            </div>
+            <div class="form-group">
+                <label for="top_n">Top N Resumes to Generate Feedback</label>
+                <input type="number" id="top_n" name="top_n" value="3" min="1" required />
+            </div>
+            <button type="submit">Shortlist Resumes</button>
+        </form>
+        <button id="downloadBtn" style="display:none;">Download Selected Resumes with Feedback</button>
+        <div id="results"></div>
+        <canvas id="scoreChart" style="display:none;"></canvas>
+        <canvas id="lineChart" style="display:none;"></canvas>
+    </div>
+
+    <script>
+        let lastResumes = [];
+        let scoreChartInstance = null;
+        let lineChartInstance = null;
+
+        document.getElementById('resumeForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            document.getElementById('results').innerHTML = "<p>Processing resumes...</p>";
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('scoreChart').style.display = 'none';
+            document.getElementById('lineChart').style.display = 'none';
+
+            const formData = new FormData(this);
+
+            fetch('/shortlist', {
+                method: 'POST',
+                body: formData,
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    const resumes = data.resumes;
+                    lastResumes = resumes; // Save for download
+                    let html = '';
+                    resumes.forEach((resume, idx) => {
+                        html += `
+                        <div class="resume-block">
+                            <input type="checkbox" class="select-checkbox" id="select${idx}" checked />
+                            <h3>${idx + 1}. ${resume.filename}</h3>
+                            <div class="score"><strong>Final Score:</strong> ${resume.final_score} / 100</div>
+                            <div class="score"><strong>Analyst Agent's Score:</strong> ${resume.scores.analyst}</div>
+                            <div class="score"><strong>Skills Agent's Score:</strong> ${resume.scores.skills}</div>
+                            <div class="score"><strong>Education Agent's Score:</strong> ${resume.scores.education}</div>
+                            <div class="score"><strong>HR Agent's Score:</strong> ${resume.scores.hr}</div>
+                            ${
+                                resume.feedback
+                                    ? `<div class="feedback"><strong>Feedback:</strong><br>${resume.feedback}</div>`
+                                    : ''
+                            }
+                            <span class="expander" onclick="toggleText('resume${idx}')">Show Resume Text</span>
+                            <div class="resume-text" id="resume${idx}">${resume.resume_text}</div>
+                        </div>
+                    `;
+                    });
+                    document.getElementById('results').innerHTML = html;
+
+                    // Show the download button
+                    document.getElementById('downloadBtn').style.display = 'block';
+
+                    // Draw the charts
+                    drawScoreChart(resumes);
+                    drawLineChart(resumes);
+
+                    // Attach click event for download
+                    document.getElementById('downloadBtn').onclick = function () {
+                        const selectedResumes = [];
+                        lastResumes.forEach((resume, idx) => {
+                            const checkbox = document.getElementById(`select${idx}`);
+                            if (checkbox && checkbox.checked) {
+                                selectedResumes.push(resume);
+                            }
+                        });
+                        if (selectedResumes.length === 0) {
+                            alert('Please select at least one resume to download.');
+                            return;
+                        }
+                        fetch('/download_top_n', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ resumes: selectedResumes, top_n: selectedResumes.length }),
+                        })
+                            .then((response) => {
+                                if (!response.ok) throw new Error('Network response was not ok');
+                                return response.blob();
+                            })
+                            .then((blob) => {
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'selected_resumes_with_feedback.zip';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                            })
+                            .catch(() => alert('Failed to download ZIP. Please try again.'));
+                    };
+                })
+                .catch(() => {
+                    document.getElementById('results').innerHTML =
+                        "<p style='color:red;'>Error processing resumes. Please try again.</p>";
+                });
+        });
+
+        function toggleText(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Visualization: Draw Chart.js bar chart of resume scores
+        function drawScoreChart(resumes) {
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            const labels = resumes.map(r => r.filename);
+            const scores = resumes.map(r => r.final_score);
+
+            // Destroy previous chart if exists
+            if (scoreChartInstance) {
+                scoreChartInstance.destroy();
+            }
+
+            document.getElementById('scoreChart').style.display = 'block';
+
+            scoreChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Final Score',
+                        data: scores,
+                        backgroundColor: '#00bfff',
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Visualization: Draw Chart.js line chart comparing agent and final scores
+        function drawLineChart(resumes) {
+            const ctx = document.getElementById('lineChart').getContext('2d');
+            const labels = resumes.map(r => r.filename);
+            const analyst = resumes.map(r => r.scores.analyst);
+            const skills = resumes.map(r => r.scores.skills);
+            const education = resumes.map(r => r.scores.education);
+            const hr = resumes.map(r => r.scores.hr);
+            const final = resumes.map(r => r.final_score);
+
+            // Destroy previous chart if exists
+            if (lineChartInstance) {
+                lineChartInstance.destroy();
+            }
+
+            document.getElementById('lineChart').style.display = 'block';
+
+            lineChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Analyst',
+                            data: analyst,
+                            borderColor: '#00bfff',
+                            backgroundColor: 'rgba(0,191,255,0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Skills',
+                            data: skills,
+                            borderColor: '#ff6384',
+                            backgroundColor: 'rgba(255,99,132,0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Education',
+                            data: education,
+                            borderColor: '#36a2eb',
+                            backgroundColor: 'rgba(54,162,235,0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'HR',
+                            data: hr,
+                            borderColor: '#ffce56',
+                            backgroundColor: 'rgba(255,206,86,0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Final Score',
+                            data: final,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46,204,113,0.1)',
+                            borderDash: [5,5],
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Agent Scores and Final Score Comparison' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
