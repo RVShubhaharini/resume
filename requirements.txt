@@ -10,3 +10,4 @@ huggingface_hub
 python-dotenv
 sentencepiece
 gunicorn
+sentence_transformers
