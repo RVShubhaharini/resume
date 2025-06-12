@@ -1,4 +1,12 @@
 langgraph
 torch
 PyPDF2
+flask-cors
+flask
 python-docx
+python-dotenv
+langchain
+sentence-transformers
+huggingface_hub
+transformers
+gunicorn
